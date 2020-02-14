@@ -11,7 +11,7 @@ from datetime import timedelta
 
 # Create your views here.
 
-''' testing View for manually updating the database '''
+
 @api_view(['GET'])
 @permission_classes((permissions.IsAuthenticated,))
 def server_time(request):
