@@ -11,29 +11,11 @@ from datetime import timedelta
 
 # Create your views here.
 
-
+''' testing View for manually updating the database '''
 @api_view(['GET'])
 @permission_classes((permissions.IsAuthenticated,))
 def server_time(request):
-    tomorrow = datetime.datetime.now()
-    # tomorrow.replace(day=22)
-    # Enlace.objects.filter(enlace_anuncio='https://www.revolico.com/modificar-anuncio.html?key=EyIFzbHJzicN31645757').update(
-    #                              status= 'QUEUED',
-    #                              next_published_time= tomorrow,
-    #                              # remaining_post=None,
-    #                              # sent_to_client= None
-    #                              )
-    Enlace.objects.all().update(
-                                 status= 'QUEUED',
-                                 next_published_time= tomorrow,
-                                 # remaining_post=2,
-                                 sent_to_client= None
-                                 )
-
-
-    # finished = Enlace.objects.filter(status='FINISHED')
-    # print(len(finished))
-
+    
     return Response(datetime.datetime.now())
 
 
@@ -47,17 +29,17 @@ def all_links(request):
 @api_view(['GET'])
 @permission_classes((permissions.IsAuthenticated,))
 def get_queued_links(request):
-    # Verificar que todos estan procesados
+    # Verify all links are processed
     finished = Enlace.objects.filter(status='FINISHED')
     if len(list_all_links()) == len(finished):
         Enlace.objects.all().update(status='QUEUED')
         return Response('Se terminaron de publicar los enlaces por hoy.', status=404)
 
-    check_link_status_and_requeued_it() # enlaces que queden pendientes regresarlos a la cola con un dia antes
+    check_link_status_and_requeued_it() # Links which are pending requeued them with a day before on their field 'next_published_time'
     queryset = Enlace.objects.filter(status='QUEUED').order_by('next_published_time')
     serializer = EnlaceSerializer(queryset,many=True)
 
-    # validacion para multiples publicistas en caso q todos los enlaces esten siendo procesados
+    # Validate if all the workers have a link assigned at the same time.
     try:
         next_time = datetime.datetime.strptime(serializer.data[0]["next_published_time"], '%Y-%m-%dT%H:%M:%S.%f')
     except:
@@ -97,31 +79,11 @@ def set_link_queued(request, url):
         if str(url) in i["enlace_anuncio"]:
             update_enlace_after_published(i["enlace_anuncio"])
 
-    # TODO check q funcione este for loop
-    # link = [i["enlace_anuncio"] for i in serializer.data if str(url) in i["enlace_anuncio"] ]
-    # update_enlace_after_published(link)
-    # implementar las estadisticas usando request.user
-    # # print(request.user)
-
     return Response('Enlace publicado, presione Continuar para seguir publicando.', status=200)
 
 
 
-# en la interfaz de admin poner una opcion para modificar los horarios en q el server estara sirviendo enlaces
-# default(lunes a sabados de 9am - 6pm)
-
-# con respecto a la frecuencia:
-
-# enviar 3 enlaces a cada cliente de una vez para ser procesados
-
-# ponerle un campo de tiempo a cada enlace que se le entregue a un cliente de maximo 2 minutos, si en ese tiempo
-# el cliente no ha devuelto un estado 200 del enlace q se le entrego ponerlo como queued de nuevo
-
-# boton para reportar anuncion invalidos
-
-
-
-# metodos auxiliares
+# Auxiliar methods
 
 def list_all_links():
     enlace =[]
@@ -131,31 +93,28 @@ def list_all_links():
         enlace.append(i["enlace_anuncio"])
     return enlace
 
-# Set processing a los enlances
+# Set processing status to the links
 
 def set_processing(url):
     processing = Enlace
     processing.objects.filter(enlace_anuncio=url). \
         update(status= 'PROCESSING', sent_to_client=datetime.datetime.now())
 
+# Return a list of all Logged in users
+def list_logged_users():
+    sessions = Session.objects.filter(expire_date__gte=timezone.now() )
+    uid_list = []
+    for session in sessions:
+        data = session.get_decoded()
+        uid_list.append(data.get('_auth_user_id', None))
+    return User.objects.filter(id__in=uid_list)
 
-# def list_logged_users():
-#     sessions = Session.objects.filter(expire_date__gte=timezone.now() )
-#     uid_list = []
-#     for session in sessions:
-#         data = session.get_decoded()
-#         uid_list.append(data.get('_auth_user_id', None))
-#     return User.objects.filter(id__in=uid_list)
 
 def check_link_status_and_requeued_it():
     processing = Enlace.objects.filter(status='PROCESSING').order_by('sent_to_client')
     serializer = EnlaceSerializer(processing, many=True)
     if len(serializer.data):
         for i in serializer.data:
-            # if datetime.datetime.now() - datetime.datetime.strptime(i["sent_to_client"], '%Y-%m-%dT%H:%M:%S.%f'):
-                # Enlace.objects.filter(i["enlace_anuncio"]).update(status='QUEUED',
-                #                                                   sent_to_client= None
-                #                                                   )
             m = datetime.datetime.now() - datetime.datetime.strptime(i["sent_to_client"], '%Y-%m-%dT%H:%M:%S.%f')
             if m.seconds//60 % 60 >= 2:
                 Enlace.objects.filter(enlace_anuncio=i["enlace_anuncio"]).update(
