@@ -25,7 +25,6 @@ def validateExtensionContent(value):
         for i in file:
             if file.index(i) == 0:
                 for v in file[file.index(i)::3]:
-                    # if name_validator(sanitize(v)) == True:
                     name_enlace.append(sanitize(v))
 
             if file.index(i) == 1:
@@ -39,7 +38,7 @@ def validateExtensionContent(value):
             if file.index(i) == 2:
                 for v in file[file.index(i)::3]:
                     if re.fullmatch(r'(108|135|180|270|540|60|45|30|15|10|5){1}', sanitize(v)) == None:
-                        raise ValidationError(u'Frecuencia del anuncio incorrecta: '+sanitize(v)+'. Asegurese de usar solo numeros y que sea uno'
+                        raise ValidationError(u'Frecuencia del anuncio incorrecta: '+sanitize(v)+'. Asegúrese de usar solo números y que sea uno'
                                                                                                  'de los siguiente: 108,135,180,270,540,60,45,'
                                                                                                  '30,15,10,5')
                     else:
@@ -60,7 +59,7 @@ def enlace_validator(link):
 
 def name_validator(name):
     if re.fullmatch('[^0-9]+', name) == None:
-        raise ValidationError(u'Nombre del anuncio incorrecto: '+ sanitize(name)+ '. Asegurese de no usar numeros')
+        raise ValidationError(u'Nombre del anuncio incorrecto: '+ sanitize(name)+ '. Asegúrese de no usar números')
     else:
         return True
 
@@ -74,7 +73,7 @@ def links_listed():
 
 def user_validator(user):
     if re.fullmatch('\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+',user) ==None:
-        raise ValidationError(u'El usuario debe ser un correo electronico valido')
+        raise ValidationError(u'El usuario debe ser un correo electrónico válido')
     else:
         return True
 
